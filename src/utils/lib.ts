@@ -1,4 +1,5 @@
 import { v4 } from "uuid"
+import { computeDistance } from "./geom"
 import { Boid, State } from "./types"
 
 
@@ -16,20 +17,7 @@ export function createState(nBoids: number, dimensions: number, config: State["c
 }
 
 export function updateState(state: State): State {
-  const distances = new Map()
   const { config } = state
-
-  function computeDistance(boid1: Boid, boid2: Boid): number {
-    const key = [boid1.id, boid2.id].sort().join("-")
-    if (distances.has(key)) return distances.get(key)
-    const sum = boid1.coords.reduce((acc, coord, i) => {
-      const diff = coord - boid2.coords[i]
-      return acc + diff * diff
-    }, 0)
-    const distance = Math.sqrt(sum)
-    distances.set(key, distance)
-    return distance
-  }
 
   const boids = state.boids.map<Boid>((boid) => {
     const closeBoids = state.boids.filter(b => b.id !== boid.id && computeDistance(boid, b) < config.CLOSE_RADIUS)

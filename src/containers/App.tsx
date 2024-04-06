@@ -1,69 +1,11 @@
 import { useControls } from 'leva'
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMeasure } from "react-use"
 import { drawState } from "../utils/canvas"
+import { SCALE, STATE_CONFIG, STATE_INIT } from '../utils/config'
+import { resetCache } from '../utils/geom'
 import { createState, updateState } from "../utils/lib"
-
-const SCALE = 2
-const STATE_INIT = {
-  nBoids: {
-    value: 100,
-    min: 1,
-    max: 1000,
-    step: 1
-  },
-  dimensions: {
-    value: 2,
-    min: 1,
-    max: 100,
-    step: 1
-  }
-}
-const STATE_CONFIG = {
-  FLEE_FACTOR: {
-    value: 0.001,
-    min: 0,
-    max: 0.1,
-    step: 0.001
-  },
-  ALIGNMENT_FACTOR: {
-    value: 0.001,
-    min: 0,
-    max: 0.1,
-    step: 0.001
-  },
-  CENTERING_FACTOR: {
-    value: 0.001,
-    min: 0,
-    max: 0.1,
-    step: 0.001
-  },
-  TURN_FACTOR: {
-    value: 0.001,
-    min: 0,
-    max: 0.1,
-    step: 0.001
-  },
-  EDGE_SIZE: {
-    value: 0.1,
-    min: 0,
-    max: 1,
-    step: 0.001
-  },
-  CLOSE_RADIUS: {
-    value: 0.1,
-    min: 0,
-    max: 1,
-    step: 0.001
-  },
-  FAR_RADIUS: {
-    value: 0.2,
-    min: 0,
-    max: 1,
-    step: 0.001
-  },
-}
-
+import { getMeanCloseFlocksSize, getMeanFarFlocksSize, getMeanModulusSpeed } from '../utils/stats'
 
 export function App() {
   const config = useControls(STATE_CONFIG)
@@ -72,6 +14,9 @@ export function App() {
   const state = useRef(createState(nBoids, dimensions, config))
   const requestAnimationRef = useRef<number>()
   const [measureRef, size] = useMeasure<HTMLCanvasElement>()
+  const [meanCloseFlocksSize, setMeanCloseFlocksSize] = useState(0)
+  const [meanFarFlocksSize, setMeanFarFlocksSize] = useState(0)
+  const [meanModulusSpeed, setMeanModulusSpeed] = useState(0)
   
   function start() {
     cancelAnimationFrame(requestAnimationRef.current || 0)
@@ -79,6 +24,13 @@ export function App() {
     function loop() {
       drawState(state.current, ctx, SCALE)
       state.current = updateState(state.current)
+      const newMeanCloseFlocksSize = getMeanCloseFlocksSize(state.current)
+      const newMeanFarFlocksSize = getMeanFarFlocksSize(state.current)
+      const newMeanModulusSpeed = getMeanModulusSpeed(state.current) * 1000
+      setMeanCloseFlocksSize(newMeanCloseFlocksSize)
+      setMeanFarFlocksSize(newMeanFarFlocksSize)
+      setMeanModulusSpeed(newMeanModulusSpeed)
+      resetCache()
       requestAnimationRef.current = requestAnimationFrame(() => loop())
     }
     loop()
@@ -102,6 +54,13 @@ export function App() {
 
 
   return (
-    <canvas ref={canvasRef} width={size.width * SCALE} height={size.height * SCALE} />
+    <div id="main">
+      <canvas ref={canvasRef} width={size.width * SCALE} height={size.height * SCALE} />
+      <div id="data">
+        <p>Mean close flock size: {meanCloseFlocksSize.toFixed(2)}</p>
+        <p>Mean far flock size: {meanFarFlocksSize.toFixed(2)}</p>
+        <p>Mean modulus speed: {meanModulusSpeed.toFixed(2)}</p>
+      </div>
+    </div>
   )
 }
